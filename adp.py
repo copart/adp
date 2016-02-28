@@ -7,6 +7,7 @@ import sys
 import time
 import urllib
 import urllib2
+import ConfigParser
 from BeautifulSoup import BeautifulSoup
 
 class PayCheckFetcher:
@@ -116,6 +117,7 @@ class PayCheckFetcher:
     # all the files
     def request(self):
         soup = self.getSoupResponse()
+        #print(soup.prettify())
         yeardata = sorted(self.getAllYears(soup).items(), reverse=True)
         for year, year_id in yeardata:
             print 'processing '+year
@@ -145,14 +147,28 @@ class PayCheckFetcher:
 
 def main(argv):
     if (len(argv) != 1 and len(argv) != 2):
-        print "usage: python adp.py <username> [<password>]"
-        return -1
-
-    username = argv[0]
-    if len(argv) == 2:
-        password = argv[1]
+        
+        #If no arguments passed, check to see if a configuration file exists, if so, attempt to load the
+        #username, password, and download folder
+        config = ConfigParser.ConfigParser({'username': None, 'password': None, 'savepath': os.getcwd() })
+        config.read( os.path.join( os.path.expanduser("~"),'.config/adp.cfg') )
+                
+        if config.has_section('ADP'):
+            username = config.get('ADP', 'username')
+            password = config.get('ADP', 'password')
+            savepath = config.get('ADP', 'savepath')
+            os.chdir(savepath)
+        
+        #No settings found, output usage error
+        if ( username is None or password is None ):
+            print "usage: python adp.py <username> [<password>]"
+            return -1
     else:
-        password = getpass.getpass()
+        username = argv[0]
+        if len(argv) == 2:
+            password = argv[1]
+        else:
+            password = getpass.getpass()
 
     fetcher = PayCheckFetcher(username, password)
     fetcher.request()
